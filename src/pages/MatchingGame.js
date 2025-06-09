@@ -17,14 +17,14 @@ function shuffle(array) { // shuffle function to randomize the order of images
   return copy;
 }
 
-function pickRandomImages(images, count, category) {
+function pickRandomImages(images, level, category) {
   
   const selectedImages = images[category]
   const shuffled = shuffle(selectedImages);
-  return shuffled.slice(0, count*4);
+  return shuffled.slice(0, level*4); // pick 4 different images for level 1, 8 for level 2, and 12 for level 3
 }
 
-function Tile({ tile, onClick }) { // Tile component to display each tile
+function Tile({ tile, onClick }) { // Tile component to display each tile. tile is an object with properties: id, image, flipped, and matched
   return (
     <div
       onClick={onClick}
@@ -43,6 +43,7 @@ function Tile({ tile, onClick }) { // Tile component to display each tile
         userSelect: "none",
       }}
     >
+      {/* If the tile is flipped or matched, show the image, otherwise show a question mark */}
       {tile.flipped || tile.matched ? (
           <img
             className="img-fluid"
@@ -66,49 +67,51 @@ export default function MatchingGame() {
   const [lock, setLock] = useState(false); // lock prevents further clicks while checking matches
   const [score, setScore] = useState(0); // score starts at 0 and increases with matches
 
-  useEffect(() => {
+  useEffect(() => { 
     const baseImages = pickRandomImages(allImages, level, category);
-    const doubled = [...baseImages, ...baseImages].map((img, index) => ({
+    const doubled = [...baseImages, ...baseImages].map((img, index) => ({ 
       id: index,
       image: img,
       flipped: false,
       matched: false,
     })); 
-    // doubled will be an array of objects with id, image, flipped, and matched properties
+    // doubled will be an array of objects with id, image, flipped, and matched properties (tiles)
     setTiles(shuffle(doubled));
     setSelected([]);
     setLock(false);
   }, [level, category]); // useEffect runs when level or category changes to reset the game state
 
-  const handleClick = (index) => {
+
+
+  const handleClick = (index) => { // handleClick is called when a tile is clicked
     if (lock || tiles[index].flipped || tiles[index].matched) return; // ignore clicks on already flipped or matched tiles or if the game is locked
 
     const newTiles = [...tiles]; // create a copy of the current tiles state
-    newTiles[index].flipped = true;
-    const newSelected = [...selected, index];
+    newTiles[index].flipped = true; // flip the clicked tile
+    const newSelected = [...selected, index]; // add the index of the clicked tile to the selected array
 
-    if (newSelected.length === 2) {
+    if (newSelected.length === 2) { // if two tiles are selected, check for a match
       const [firstIdx, secondIdx] = newSelected;
-      if (newTiles[firstIdx].image === newTiles[secondIdx].image) {
-        newTiles[firstIdx].matched = true;
+      if (newTiles[firstIdx].image === newTiles[secondIdx].image) { // if the images match
+        newTiles[firstIdx].matched = true; // mark both tiles as matched
         newTiles[secondIdx].matched = true;
-        setScore((prev) => prev + 10);
-        setSelected([]);
-      } else {
+        setScore((prev) => prev + 10); // increase score by 10 for a match
+        setSelected([]); // reset selected tiles
+      } else { // if the images do not match
         setLock(true); // lock the game for a short period to show the mismatch
         setTimeout(() => {
-          newTiles[firstIdx].flipped = false;
+          newTiles[firstIdx].flipped = false; // flip both tiles back
           newTiles[secondIdx].flipped = false;
-          setTiles([...newTiles]);
-          setSelected([]);
+          setTiles([...newTiles]); // update the tiles state
+          setSelected([]); // reset selected tiles
           setLock(false); // unlock the game after the timeout
         }, 1000);
-        setScore((prev) => Math.max(prev - 2, 0));
+        setScore((prev) => Math.max(prev - 2, 0)); // decrease score by 2 for a mismatch
       }
     }
-    else if (newSelected.length < 2) setSelected(newSelected);
+    else if (newSelected.length < 2) setSelected(newSelected); // if less than two tiles are selected, just update the selected state
     
-    setTiles([...newTiles]);
+    setTiles([...newTiles]); // update the tiles state with the flipped tile
   };
 
   const isLevelComplete = tiles.every((tile) => tile.matched); // check if all tiles are matched to determine if the level is complete
